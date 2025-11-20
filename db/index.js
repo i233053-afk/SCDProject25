@@ -1,7 +1,25 @@
 const fileDB = require('./file');
 const recordUtils = require('./record');
 const vaultEvents = require('../events');
+const fs = require('fs');
+const path = require('path');
 
+// ------------------------
+// 🔹 Backup Setup
+// ------------------------
+const backupsDir = path.join(__dirname, '..', 'backups');
+if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir);
+
+function createBackup(data) {
+  const timestamp = new Date().toISOString().replace(/:/g, '-'); // safe for filenames
+  const backupFile = path.join(backupsDir, `backup_${timestamp}.json`);
+  fs.writeFileSync(backupFile, JSON.stringify(data, null, 2));
+  console.log(`💾 Backup created successfully: ${backupFile}`);
+}
+
+// ------------------------
+// 🔹 CRUD Functions
+// ------------------------
 function addRecord({ name, value }) {
   recordUtils.validateRecord({ name, value });
   const data = fileDB.readDB();
@@ -12,9 +30,11 @@ function addRecord({ name, value }) {
   data.push(newRecord);
   fileDB.writeDB(data);
   vaultEvents.emit('recordAdded', newRecord);
+
+  // Create backup after adding
+  createBackup(data);
   return newRecord;
 }
-
 
 function listRecords() {
   return fileDB.readDB();
@@ -38,7 +58,11 @@ function deleteRecord(id) {
   data = data.filter(r => r.id !== id);
   fileDB.writeDB(data);
   vaultEvents.emit('recordDeleted', record);
+
+  // Create backup after deleting
+  createBackup(data);
   return record;
 }
 
 module.exports = { addRecord, listRecords, updateRecord, deleteRecord };
+
