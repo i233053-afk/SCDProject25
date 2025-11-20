@@ -57,6 +57,46 @@ function exportData() {
 }
 
 // ------------------------
+// 🔹 Vault Statistics
+// ------------------------
+function viewVaultStatistics() {
+  const records = db.listRecords();
+  if (records.length === 0) {
+    console.log("No records found in the vault.");
+    return;
+  }
+
+  const totalRecords = records.length;
+
+  // Last modification (most recent createdAt)
+  const lastModified = records.reduce((latest, record) => {
+    const date = new Date(record.createdAt);
+    return date > latest ? date : latest;
+  }, new Date(0));
+
+  // Longest name
+  const longestRecord = records.reduce((longest, record) => {
+    return record.name.length > longest.name.length ? record : longest;
+  }, records[0]);
+
+  // Earliest and latest creation dates
+  const sortedByDate = records
+    .map(r => new Date(r.createdAt))
+    .sort((a, b) => a - b);
+
+  const earliest = sortedByDate[0];
+  const latest = sortedByDate[sortedByDate.length - 1];
+
+  console.log("Vault Statistics:");
+  console.log("--------------------------");
+  console.log(`Total Records: ${totalRecords}`);
+  console.log(`Last Modified: ${lastModified.toLocaleString()}`);
+  console.log(`Longest Name: ${longestRecord.name} (${longestRecord.name.length} characters)`);
+  console.log(`Earliest Record: ${earliest.toISOString().split('T')[0]}`);
+  console.log(`Latest Record: ${latest.toISOString().split('T')[0]}`);
+}
+
+// ------------------------
 // 🔹 Main Menu
 // ------------------------
 function menu() {
@@ -69,7 +109,8 @@ function menu() {
 5. Search Record
 6. Sort Records
 7. Export Data
-8. Exit
+8. View Vault Statistics
+9. Exit
 =====================
   `);
 
@@ -78,7 +119,6 @@ function menu() {
       case '1':
         rl.question('Enter name: ', name => {
           rl.question('Enter value: ', value => {
-            // Add createdAt field when adding a record
             db.addRecord({ name, value, createdAt: new Date().toISOString() });
             console.log('✅ Record added successfully!');
             menu();
@@ -123,14 +163,12 @@ function menu() {
       case '6':
         rl.question('Sort by (name/date): ', field => {
           rl.question('Order (asc/desc): ', order => {
-            const records = db.listRecords(); // get all records
-            let sorted = [...records]; // clone array
+            const records = db.listRecords();
+            let sorted = [...records];
 
-            if (field.toLowerCase() === 'name') {
-              sorted.sort((a, b) => a.name.localeCompare(b.name));
-            } else if (field.toLowerCase() === 'date') {
-              sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-            } else {
+            if (field.toLowerCase() === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name));
+            else if (field.toLowerCase() === 'date') sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            else {
               console.log('Invalid field!');
               return menu();
             }
@@ -155,6 +193,11 @@ function menu() {
         break;
 
       case '8':
+        viewVaultStatistics();
+        menu();
+        break;
+
+      case '9':
         console.log('👋 Exiting NodeVault...');
         rl.close();
         break;
