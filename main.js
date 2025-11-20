@@ -11,23 +11,21 @@ const rl = readline.createInterface({
 // 🔹 Search Functionality
 // ------------------------
 function searchRecords(keyword) {
-    keyword = keyword.toLowerCase();
-    const records = db.listRecords();
-    const results = records.filter(record =>
-        record.name.toLowerCase().includes(keyword) ||
-        record.id.toString().includes(keyword)
-    );
+  keyword = keyword.toLowerCase();
+  const records = db.listRecords();
+  const results = records.filter(record =>
+    record.name.toLowerCase().includes(keyword) ||
+    record.id.toString().includes(keyword)
+  );
 
-    if (results.length === 0) {
-        console.log("No records found.");
-    } else {
-        console.log(`Found ${results.length} matching record(s):`);
-        results.forEach((record, index) => {
-            console.log(
-                `${index + 1}. ID: ${record.id} | Name: ${record.name} | Value: ${record.value}`
-            );
-        });
-    }
+  if (results.length === 0) {
+    console.log("No records found.");
+  } else {
+    console.log(`Found ${results.length} matching record(s):`);
+    results.forEach((record, index) => {
+      console.log(`${index + 1}. ID: ${record.id} | Name: ${record.name} | Value: ${record.value} | Created: ${record.createdAt}`);
+    });
+  }
 }
 
 // ------------------------
@@ -41,7 +39,8 @@ function menu() {
 3. Update Record
 4. Delete Record
 5. Search Record
-6. Exit
+6. Sort Records
+7. Exit
 =====================
   `);
 
@@ -60,7 +59,7 @@ function menu() {
       case '2':
         const records = db.listRecords();
         if (records.length === 0) console.log('No records found.');
-        else records.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
+        else records.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value} | Created: ${r.createdAt}`));
         menu();
         break;
 
@@ -92,6 +91,35 @@ function menu() {
         break;
 
       case '6':
+        rl.question('Sort by (name/date): ', field => {
+          rl.question('Order (asc/desc): ', order => {
+            const records = db.listRecords(); // get all records
+            let sorted = [...records]; // clone array
+
+            if (field.toLowerCase() === 'name') {
+              sorted.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (field.toLowerCase() === 'date') {
+              sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            } else {
+              console.log('Invalid field!');
+              return menu();
+            }
+
+            if (order.toLowerCase() === 'desc') sorted.reverse();
+
+            if (sorted.length === 0) console.log('No records found.');
+            else {
+              console.log('Sorted Records:');
+              sorted.forEach((r, index) => {
+                console.log(`${index + 1}. ID: ${r.id} | Name: ${r.name} | Value: ${r.value} | Created: ${r.createdAt}`);
+              });
+            }
+            menu();
+          });
+        });
+        break;
+
+      case '7':
         console.log('👋 Exiting NodeVault...');
         rl.close();
         break;

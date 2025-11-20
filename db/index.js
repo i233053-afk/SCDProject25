@@ -5,12 +5,16 @@ const vaultEvents = require('../events');
 function addRecord({ name, value }) {
   recordUtils.validateRecord({ name, value });
   const data = fileDB.readDB();
-  const newRecord = { id: recordUtils.generateId(), name, value };
+  const createdAt = new Date(); // store creation time
+
+  // Include createdAt in the new record
+  const newRecord = { id: recordUtils.generateId(), name, value, createdAt };
   data.push(newRecord);
   fileDB.writeDB(data);
   vaultEvents.emit('recordAdded', newRecord);
   return newRecord;
 }
+
 
 function listRecords() {
   return fileDB.readDB();
