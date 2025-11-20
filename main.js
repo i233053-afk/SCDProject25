@@ -1,4 +1,6 @@
 const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
 const db = require('./db');
 require('./events/logger'); // Initialize event logger
 
@@ -29,6 +31,32 @@ function searchRecords(keyword) {
 }
 
 // ------------------------
+// 🔹 Export Functionality
+// ------------------------
+function exportData() {
+  const records = db.listRecords();
+  if (records.length === 0) {
+    console.log("No records to export.");
+    return;
+  }
+
+  const exportFile = path.join(__dirname, 'export.txt');
+  const now = new Date().toLocaleString();
+
+  let content = `NodeVault Export\nDate & Time: ${now}\nTotal Records: ${records.length}\nFile: export.txt\n\n`;
+  content += "ID | Name | Value | Created\n";
+  content += "----------------------------------\n";
+
+  records.forEach(r => {
+    const created = r.createdAt || "N/A";
+    content += `${r.id} | ${r.name} | ${r.value} | ${created}\n`;
+  });
+
+  fs.writeFileSync(exportFile, content, 'utf8');
+  console.log(`✅ Data exported successfully to ${exportFile}`);
+}
+
+// ------------------------
 // 🔹 Main Menu
 // ------------------------
 function menu() {
@@ -40,7 +68,8 @@ function menu() {
 4. Delete Record
 5. Search Record
 6. Sort Records
-7. Exit
+7. Export Data
+8. Exit
 =====================
   `);
 
@@ -49,7 +78,8 @@ function menu() {
       case '1':
         rl.question('Enter name: ', name => {
           rl.question('Enter value: ', value => {
-            db.addRecord({ name, value });
+            // Add createdAt field when adding a record
+            db.addRecord({ name, value, createdAt: new Date().toISOString() });
             console.log('✅ Record added successfully!');
             menu();
           });
@@ -120,6 +150,11 @@ function menu() {
         break;
 
       case '7':
+        exportData();
+        menu();
+        break;
+
+      case '8':
         console.log('👋 Exiting NodeVault...');
         rl.close();
         break;
