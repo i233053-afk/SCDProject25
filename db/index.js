@@ -1,66 +1,43 @@
-const fileDB = require('./file');
-const recordUtils = require('./record');
-const vaultEvents = require('../events');
-const fs = require('fs');
-const path = require('path');
+const Record = require("../models/Record");
+const recordUtils = require("./record");
+const connectMongo = require("./mongo");
+const vaultEvents = require("../events");
 
-// ------------------------
-// 🔹 Backup Setup
-// ------------------------
-const backupsDir = path.join(__dirname, '..', 'backups');
-if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir);
+connectMongo();
 
-function createBackup(data) {
-  const timestamp = new Date().toISOString().replace(/:/g, '-'); // safe for filenames
-  const backupFile = path.join(backupsDir, `backup_${timestamp}.json`);
-  fs.writeFileSync(backupFile, JSON.stringify(data, null, 2));
-  console.log(`💾 Backup created successfully: ${backupFile}`);
-}
+// ADD RECORD
+async function addRecord({ name, value }) {
+  const createdAt = new Date().toISOString();
+  const id = recordUtils.generateId();
 
-// ------------------------
-// 🔹 CRUD Functions
-// ------------------------
-function addRecord({ name, value }) {
-  recordUtils.validateRecord({ name, value });
-  const data = fileDB.readDB();
-  const createdAt = new Date(); // store creation time
+  const newRecord = await Record.create({ id, name, value, createdAt });
 
-  // Include createdAt in the new record
-  const newRecord = { id: recordUtils.generateId(), name, value, createdAt };
-  data.push(newRecord);
-  fileDB.writeDB(data);
-  vaultEvents.emit('recordAdded', newRecord);
-
-  // Create backup after adding
-  createBackup(data);
+  vaultEvents.emit("recordAdded", newRecord);
   return newRecord;
 }
 
-function listRecords() {
-  return fileDB.readDB();
+// LIST RECORDS
+async function listRecords() {
+  return await Record.find({});
 }
 
-function updateRecord(id, newName, newValue) {
-  const data = fileDB.readDB();
-  const record = data.find(r => r.id === id);
-  if (!record) return null;
-  record.name = newName;
-  record.value = newValue;
-  fileDB.writeDB(data);
-  vaultEvents.emit('recordUpdated', record);
+// UPDATE RECORD
+async function updateRecord(id, newName, newValue) {
+  const record = await Record.findOneAndUpdate(
+    { id },
+    { name: newName, value: newValue },
+    { new: true }
+  );
+
+  if (record) vaultEvents.emit("recordUpdated", record);
   return record;
 }
 
-function deleteRecord(id) {
-  let data = fileDB.readDB();
-  const record = data.find(r => r.id === id);
-  if (!record) return null;
-  data = data.filter(r => r.id !== id);
-  fileDB.writeDB(data);
-  vaultEvents.emit('recordDeleted', record);
+// DELETE RECORD
+async function deleteRecord(id) {
+  const record = await Record.findOneAndDelete({ id });
 
-  // Create backup after deleting
-  createBackup(data);
+  if (record) vaultEvents.emit("recordDeleted", record);
   return record;
 }
 
